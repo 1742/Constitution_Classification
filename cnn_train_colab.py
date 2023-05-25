@@ -21,7 +21,7 @@ data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classifica
 cfg_file = r'/content/Constitution_Classification/model/config.json'
 pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/vgg16/vgg16.pth'
 save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/vgg16'
-effect_path = r'/content/runs/vgg16'
+effect_path = r'/content/runs/resnet50'
 save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/vgg16/result_1.png'
 
 learning_rate = 1e-4
