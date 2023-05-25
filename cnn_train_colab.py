@@ -27,11 +27,11 @@ save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classif
 
 learning_rate = 1e-4
 weight_decay = 1e-8
-epochs = 20
-batch_size = 32
+epochs = 50
+batch_size = 64
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('The train will run in {} ...'.format(device))
-pretrained = True
+pretrained = False
 save_option = True
 
 
@@ -203,7 +203,7 @@ if __name__ == '__main__':
     # 打乱数据集
     img_info = shuffle(img_info)
 
-    # 打印数据划分情况
+    # 划分数据集
     data_num = len(img_info)
     train_data_info = img_info[:int(data_num * 0.7)]
     val_data_info = img_info[int(data_num * 0.7):int(data_num * 0.9)]
@@ -230,6 +230,8 @@ if __name__ == '__main__':
     criterion = 'CELoss'
     # lr_schedule = {'name': 'ExponentialLR', 'gamma': 0.99}
     lr_schedule = None
+    print('model:', model)
+    print('epoch:', epochs)
     print('loss:', criterion)
     print('optimizer:', optimizer)
     print('lr_schedule:', lr_schedule)
