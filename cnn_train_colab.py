@@ -224,8 +224,8 @@ if __name__ == '__main__':
     with open(cfg_file, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    # model = VGG16(cfg['vgg16'], 3)
-    model = Resnet(cfg['resnet50'], 3, BasicBlock, 1)
+    # model = VGG16(cfg['vgg16'], 2)
+    model = Resnet(cfg['resnet50'], 3, BasicBlock, 2)
     optimizer = 'Adam'
     criterion = 'CELoss'
     # lr_schedule = {'name': 'ExponentialLR', 'gamma': 0.99}
