@@ -198,7 +198,7 @@ if __name__ == '__main__':
     # 划分数据集
     with open(data_path_txt, 'r', encoding='utf-8') as f:
         img_info = f.readlines()
-    print("Successfully read img names in {}!".format(data_path))
+    print("Successfully read img names from {}!".format(data_path))
 
     # 打乱数据集
     img_info = shuffle(img_info)
