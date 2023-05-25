@@ -177,7 +177,8 @@ def train(
         val_f1.append(per_val_f1 / len(val_dataloader))
 
     if save_option:
-        torch.save(model.state_dict(), os.path.join(save_path, 'vgg16.pth'))
+        torch.save(model.state_dict(), os.path.join(save_path, 'resnet50.pth'))
+        print('Successfully save weights file in {}'.format(save_path))
 
     return {
         'epoch': epochs, 'loss': [train_loss, val_loss], 'acc': [train_acc, val_acc],
