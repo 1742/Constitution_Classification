@@ -231,8 +231,8 @@ if __name__ == '__main__':
     criterion = 'CELoss'
     # lr_schedule = {'name': 'ExponentialLR', 'gamma': 0.99}
     lr_schedule = None
+    print('model:\n', model)
     print('epoch:', epochs)
-    print('model: resnet50')
     print('loss:', criterion)
     print('optimizer:', optimizer)
     print('lr_schedule:', lr_schedule)
