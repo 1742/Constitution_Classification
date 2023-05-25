@@ -205,6 +205,8 @@ if __name__ == '__main__':
 
     # 划分数据集
     data_num = len(img_info)
+
+    # 划分数据集
     train_data_info = img_info[:int(data_num * 0.7)]
     val_data_info = img_info[int(data_num * 0.7):int(data_num * 0.9)]
     test_data_info = img_info[int(data_num * 0.9):]
@@ -230,7 +232,7 @@ if __name__ == '__main__':
     criterion = 'CELoss'
     # lr_schedule = {'name': 'ExponentialLR', 'gamma': 0.99}
     lr_schedule = None
-    print('model:', model)
+    print('model:\n', model)
     print('epoch:', epochs)
     print('loss:', criterion)
     print('optimizer:', optimizer)
