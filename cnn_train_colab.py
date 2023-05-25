@@ -202,6 +202,8 @@ if __name__ == '__main__':
 
     # 打乱数据集
     img_info = shuffle(img_info)
+
+    # 打印数据划分情况
     data_num = len(img_info)
     train_data_info = img_info[:int(data_num * 0.7)]
     val_data_info = img_info[int(data_num * 0.7):int(data_num * 0.9)]
