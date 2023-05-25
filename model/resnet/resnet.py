@@ -81,7 +81,7 @@ class Resnet(nn.Module):
         x = self.flatten(x)
         x = self.fc(x)
 
-        x = self.softmax(x)
+#         x = self.softmax(x)
 
         return x
 
