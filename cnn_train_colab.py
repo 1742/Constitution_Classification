@@ -16,13 +16,14 @@ from tqdm import tqdm
 from tools.evaluation_index import Accuracy, Confusion_matrix, Visualization
 
 
-data_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/data'
-data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/data/img_names.txt'
+# 我的数据存在谷歌云盘的舌象分割的文件夹里。。。
+data_path = r'/content/drive/MyDrive/Colab Notebooks/Tongue_Segmentation/data'
+data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Tongue_Segmentation/data/img_names.txt'
 cfg_file = r'/content/Constitution_Classification/model/config.json'
-pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/vgg16/vgg16.pth'
-save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/vgg16'
+pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet.pth'
+save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet'
 effect_path = r'/content/runs/resnet50'
-save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/vgg16/result_1.png'
+save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet/resnet50.png'
 
 learning_rate = 1e-4
 weight_decay = 1e-8
