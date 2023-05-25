@@ -22,7 +22,7 @@ data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Tongue_Segmentation/dat
 cfg_file = r'/content/Constitution_Classification/model/config.json'
 pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet.pth'
 save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet'
-effect_path = r'/content/runs/resnet50'
+effect_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet50'
 save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet/resnet50.png'
 
 learning_rate = 1e-4
