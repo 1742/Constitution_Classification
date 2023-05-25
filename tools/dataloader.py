@@ -56,9 +56,11 @@ def label_encoder(label: list):
     return labels
 
 
-def shuffle(data: list):
-    np.random.shuffle(data)
+def shuffle(data: list, times: int = 2):
+    for _ in range(times):
+        np.random.shuffle(data)
     return data
+
 
 
 if __name__ == '__main__':
