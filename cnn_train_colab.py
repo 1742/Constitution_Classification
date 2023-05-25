@@ -234,6 +234,9 @@ if __name__ == '__main__':
     lr_schedule = None
     print('model:\n', model)
     print('epoch:', epochs)
+    print('batch size:', batch_size)
+    print('learning rate:', learning_rate)
+    print('weight decay:', weight_decay)
     print('loss:', criterion)
     print('optimizer:', optimizer)
     print('lr_schedule:', lr_schedule)
