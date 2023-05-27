@@ -172,7 +172,7 @@ def train(
         # 记录每训练次平均指标
         val_loss.append(per_val_loss / len(val_dataloader))
         val_acc.append(per_val_acc / len(val_dataloader))
-        val_recall.append(per_val_precision / len(val_dataloader))
+        val_precision.append(per_val_precision / len(val_dataloader))
         val_recall.append(per_val_recall / len(val_dataloader))
         val_f1.append(per_val_f1 / len(val_dataloader))
 
