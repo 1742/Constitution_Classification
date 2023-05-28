@@ -201,7 +201,7 @@ if __name__ == '__main__':
     print("Successfully read img names from {}!".format(data_path))
 
     # 打乱数据集
-    img_info = shuffle(img_info)
+    # img_info = shuffle(img_info)
 
     # 划分数据集
     data_num = len(img_info)
