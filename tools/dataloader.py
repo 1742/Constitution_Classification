@@ -85,6 +85,12 @@ if __name__ == '__main__':
     print("Successfully read img names in {}!".format(data_path))
 
     img_info = shuffle(img_info)
+    # 保存打乱顺序后的数据
+    img_info = shuffle(img_info, 4)
+    with open(img_names_path, 'w', encoding='utf-8') as f:
+        for img in img_info:
+            f.write(img)
+    print('Successfully shuffle img names file in {}!'.format(img_names_path))
 
     transformers = [
         transforms.Resize((224, 224)),
