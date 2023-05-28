@@ -27,7 +27,7 @@ save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classif
 
 learning_rate = 1e-4
 weight_decay = 1e-8
-epochs = 50
+epochs = 20
 batch_size = 64
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('The train will run in {} ...'.format(device))
