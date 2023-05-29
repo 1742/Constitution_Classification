@@ -6,7 +6,7 @@ from model.vgg.vgg import *
 from model.resnet.resnet import Resnet
 
 from torch.utils.data import Dataset, DataLoader
-from tools.dataloader_colab import MyDatasets, shuffle, label_encoder
+from tools.dataloader import MyDatasets, shuffle, label_encoder
 from torchvision import transforms
 from tools.Mytransforms import Resize, ToTensor
 import numpy as np
@@ -28,7 +28,7 @@ save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classif
 
 learning_rate = 1e-4
 weight_decay = 1e-8
-epochs = 5
+epochs = 10
 batch_size = 64
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('The train will run in {} ...'.format(device))
