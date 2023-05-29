@@ -119,7 +119,7 @@ def predict(
     test_f1 = test_f1 / len(test_dataloader)
     if save_option:
         with open(save_predict_path, 'a', encoding='utf-8') as f:
-            f.write('{}:  acc: {:.3f}  precision: {:.3f}  recall: {:.3f}  f1: {:.3f}'.format(criterion_name, test_loss,
+            f.write('{}: {}  acc: {:.3f}  precision: {:.3f}  recall: {:.3f}  f1: {:.3f}'.format(criterion_name, test_loss,
                                                                                              test_acc, test_precision,
                                                                                              test_recall, test_f1))
 
