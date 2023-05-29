@@ -1,7 +1,11 @@
+import sys
+
 import numpy as np
 import torch
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_curve, roc_auc_score, auc
+from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
+from scipy import interp
 import json
 
 
@@ -37,39 +41,91 @@ def Confusion_matrix(predict: torch.Tensor, label: torch.Tensor, refer_labels: l
     return Precision, Recall, F1
 
 
-def Visualization(evaluation, train: bool, save_option: str = None):
+def ROC_and_AUC(predict: torch.Tensor, label: torch.Tensor, refer_label: list = None, smooth: bool = False, num_points: int = 50):
+    n_cls = len(refer_label)
+    # 因为label_binarize不会将二分类标签做成二维向量，之后使用roc_curve时会报错。。。
+    if n_cls == 2:
+        n_cls = 1
+
+    predict = torch.softmax(predict, dim=1).cpu()
+    label = label.long().cpu()
+
+    if refer_label:
+        label = label_binarize(label, classes=refer_label)
+    else:
+        label = label_binarize(label, classes=torch.max(label))
+
+    # 分别计算各类别的ROC曲线，若为二分类，只有一条曲线
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    for i in range(n_cls):
+        fpr[i], tpr[i], _ = roc_curve(label[:, i], predict[:, i])
+        if smooth:
+            tpr[i] = np.interp(np.linspace(0, 1, num_points), fpr[i], tpr[i])
+            tpr[i][0] = 0.0
+            fpr[i] = np.linspace(0, 1, num_points)
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    return fpr, tpr, roc_auc
+
+
+def Visualization(evaluation, train: bool):
     index = list(evaluation.keys())
-    index.remove('epoch')
-    figure_num = len(index)
+    if train:
+        index.remove('epoch')
+
     epoch = range(1, evaluation['epoch']+1)
     for i, k in enumerate(index):
-        plt.subplot(1, figure_num, i+1)
-        if train:
-            plt.plot(epoch, evaluation[k][0], label='train')
-            plt.plot(epoch, evaluation[k][1], label='val')
-            plt.title('train' + k)
-            plt.xlabel('epoch')
-            plt.ylabel(k)
-            plt.legend()
-        else:
-            plt.plot(epoch, evaluation[k], label='test')
-            plt.title('test' + k)
-            plt.xlabel('epoch')
-            plt.ylabel(k)
-            plt.legend()
+        plt.plot(epoch, evaluation[k][0], label='train')
+        plt.plot(epoch, evaluation[k][1], label='val')
+        plt.title('train' + k)
+        plt.xlabel('epoch')
+        plt.ylabel(k)
+        plt.legend()
+        plt.show()
 
-    if save_option:
-        plt.savefig(save_option)
-        print('Successfully save config in {}'.format(save_option))
 
+def plot_ROC(fpr: dict, tpr: dict, roc_auc: dict, n_cls: int):
+    if n_cls == 2:
+        n_cls = 1
+
+    # 创建画布
+    plt.figure()
+    # 设定线宽
+    lw = 2
+    for i in range(n_cls):
+        plt.plot(fpr[i], tpr[i], lw=lw, label='ROC curve of class %d (AUC = %0.2f)' % (i + 1, roc_auc[i]))
+    # 参考线
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    # 坐标大小
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    # 横纵坐标和标题
+    plt.xlabel('FPR')
+    plt.ylabel('TPR')
+    plt.title('ROC Curve')
+    # 标签位置
+    plt.legend(loc="lower right")
     plt.show()
 
 
 if __name__ == '__main__':
-    predict = torch.rand((16, 3))
-    label = torch.randint(3, (16,))
-    refer_labels = [0, 1, 2]
-    acc = Accuracy(predict, label)
-    print(acc)
-    P, R, F1 = Confusion_matrix(predict, label, refer_labels)
-    print(P, R, F1)
+    predict = torch.rand((16, 2))
+    label = torch.randint(2, (16,))
+    refer_labels = [0, 1]
+    # acc = Accuracy(predict, label)
+    # print(acc)
+    # P, R, F1 = Confusion_matrix(predict, label, refer_labels)
+    # print(P, R, F1)
+    #
+    # effect_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet50\effect.json'
+    # save_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet50'
+    #
+    # with open(effect_path, 'r', encoding='utf-8') as f:
+    #     effect = json.load(f)
+    #
+    # Visualization(effect, True)
+
+    fpr, tpr, roc_auc = ROC_and_AUC(predict, label, refer_labels, smooth=True, num_points=50)
+    plot_ROC(fpr, tpr, roc_auc, len(refer_labels))

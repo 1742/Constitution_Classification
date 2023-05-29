@@ -3,31 +3,33 @@ import sys
 import torch
 from torch import nn
 from model.vgg.vgg import *
-from model.resnet.resnet import Resnet, BasicBlock
+from model.resnet.resnet import Resnet
 
 from torch.utils.data import Dataset, DataLoader
 from tools.dataloader import MyDatasets, shuffle, label_encoder
 from torchvision import transforms
+from tools.Mytransforms import Resize, ToTensor
 import numpy as np
 
 import os
 import json
 from tqdm import tqdm
 from tools.evaluation_index import Accuracy, Confusion_matrix, Visualization
+import sys
 
 
 data_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data'
 data_path_txt = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data\img_names.txt'
 cfg_file = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\config.json'
-pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\model\vgg16.pth'
-save_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\vgg'
-effect_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\vgg16'
-save_figure_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\vgg16\result.png'
+pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\model\resnet50.pth'
+save_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet'
+effect_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet50'
+save_figure_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet50\result.png'
 
 learning_rate = 1e-4
 weight_decay = 1e-8
 epochs = 5
-batch_size = 16
+batch_size = 64
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('The train will run in {} ...'.format(device))
 pretrained = False
@@ -201,7 +203,7 @@ if __name__ == '__main__':
     print("Successfully read img names from {}!".format(data_path))
 
     # 打乱数据集
-#     img_info = shuffle(img_info, 2)
+    # img_info = shuffle(img_info, 2)
 
     # 划分数据集
     data_num = len(img_info)
@@ -213,8 +215,8 @@ if __name__ == '__main__':
     print('test_data_num:', len(test_data_info))
 
     transformers = [
-        transforms.Resize((224, 224)),
-        transforms.ToTensor()
+        Resize((224, 224)),
+        ToTensor()
     ]
 
     train_datasets = MyDatasets(data_path, labels, train_data_info, transformers)
@@ -226,7 +228,7 @@ if __name__ == '__main__':
 
     # model = VGG16(cfg['vgg16'], 3)
     # model = Multiple_Image_in_Decision_VGG16(cfg['vgg16'], 3)
-    model = Resnet(cfg['resnet50'], 3, BasicBlock, 2)
+    model = Resnet(cfg['resnet34'], 3, 2)
     optimizer = 'Adam'
     criterion = 'CELoss'
     # lr_schedule = {'name': 'ExponentialLR', 'gamma': 0.99}

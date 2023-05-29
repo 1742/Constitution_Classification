@@ -3,11 +3,12 @@ import sys
 import torch
 from torch import nn
 from model.vgg.vgg import *
-from model.resnet.resnet import Resnet, BasicBlock
+from model.resnet.resnet import Resnet
 
 from torch.utils.data import Dataset, DataLoader
-from tools.dataloader import MyDatasets, shuffle, label_encoder
+from tools.dataloader_colab import MyDatasets, shuffle, label_encoder
 from torchvision import transforms
+from tools.Mytransforms import Resize, ToTensor
 import numpy as np
 
 import os
@@ -18,7 +19,7 @@ from tools.evaluation_index import Accuracy, Confusion_matrix, Visualization
 
 # 我的数据存在谷歌云盘的舌象分割的文件夹里。。。
 data_path = r'/content/drive/MyDrive/Colab Notebooks/Tongue_Segmentation/data'
-data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Tongue_Segmentation/data/img_names.txt'
+data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Constitution_CLassification/data/img_names.txt'
 cfg_file = r'/content/Constitution_Classification/model/config.json'
 pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet.pth'
 save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet'
@@ -215,8 +216,8 @@ if __name__ == '__main__':
     print('test_data_num:', len(test_data_info))
 
     transformers = [
-        transforms.Resize((224, 224)),
-        transforms.ToTensor()
+        Resize((224, 224)),
+        ToTensor()
     ]
 
     train_datasets = MyDatasets(data_path, labels, train_data_info, transformers)
@@ -227,7 +228,8 @@ if __name__ == '__main__':
         cfg = json.load(f)
 
     # model = VGG16(cfg['vgg16'], 2)
-    model = Resnet(cfg['resnet50'], 3, BasicBlock, 2)
+    # model = Resnet(cfg['resnet34'], 3, 2)
+    model = Resnet(cfg['resnet50'], 3, 2)
     optimizer = 'Adam'
     criterion = 'CELoss'
     # lr_schedule = {'name': 'ExponentialLR', 'gamma': 0.99}

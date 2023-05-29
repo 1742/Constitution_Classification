@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 from tools.Mytransforms import Resize, ToTensor, Compose
+from tools.generate_target import generate_tongue, generate_face
 from PIL import Image
 import matplotlib.pyplot as plt
 import os
@@ -26,10 +27,12 @@ class MyDatasets(Dataset):
         img_info = self.img_info[index].strip().split(' ')
         img_name = img_info[0]
         label = img_info[1]
+        image_path = os.path.join(os.path.join(self.data_path, label), os.path.join('image', img_name))
         face_img_path = os.path.join(os.path.join(self.data_path, label), os.path.join('face', img_name))
         tongue_img_path = os.path.join(os.path.join(self.data_path, label), os.path.join('tongue', img_name))
-        face_img = Image.open(face_img_path).convert('RGB')
-        tongue_img = Image.open(tongue_img_path).convert('RGB')
+        # 根据mask生成面象和舌图
+        face_img = generate_face(image_path, face_img_path)
+        tongue_img = generate_tongue(image_path, tongue_img_path)
         # 数据增强
         face_img, tongue_img = self.transformers(face_img, tongue_img)
         label = self.labels[label]
@@ -65,8 +68,8 @@ def shuffle(data: list, times: int = 2):
 
 
 if __name__ == '__main__':
-    data_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data'
-    img_names_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data\img_names.txt'
+    data_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Tongue_Segmentation-master\data'
+    img_names_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Tongue_Segmentation-master\data\img_names.txt'
 
     label = os.listdir(data_path)
     if 'img_names.txt' in label:

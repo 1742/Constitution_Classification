@@ -20,9 +20,9 @@ class Conv2d(nn.Module):
         return x
 
 
-class BasicBlock(nn.Module):
+class resnet_l_BasicBlock(nn.Module):
     def __init__(self, in_channels: int, medium_channels: int, out_channels: int, kernel_size: int = 3, stride: int = 1, padding: int = 1, down_sample=None):
-        super(BasicBlock, self).__init__()
+        super(resnet_l_BasicBlock, self).__init__()
         self.down_sample = down_sample
         self.conv = nn.Sequential(
             Conv2d(in_channels, medium_channels, kernel_size=1, stride=1, padding=0),
@@ -44,12 +44,39 @@ class BasicBlock(nn.Module):
         return out
 
 
+class resnet_s_BasicBlock(nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3, stride: int = 1, padding: int = 1, down_sample=None):
+        super(resnet_s_BasicBlock, self).__init__()
+        self.down_sample = down_sample
+        self.conv = nn.Sequential(
+            Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(out_channels)
+        )
+
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        res = x
+        x = self.conv(x)
+
+        if self.down_sample is not None:
+            res = self.down_sample(res)
+
+        out = self.relu(x + res)
+
+        return out
+
+
 class Resnet(nn.Module):
-    def __init__(self, cfg: list, in_channels: int, block: nn.Module = BasicBlock, num_classes: int = 1000):
+    def __init__(self, cfg: list, in_channels: int, num_classes: int = 1000):
         super(Resnet, self).__init__()
+        if len(cfg[0]) == 7:
+            fc_cells = 2048
+        else:
+            fc_cells = 512
         # inplanes用于记录各basicblock输出，以便不同的bottleneck间连接
         self.inplanes = 64
-        self.block = block
         self.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
@@ -62,7 +89,7 @@ class Resnet(nn.Module):
 
         self.avepool = nn.AvgPool2d(7)
         self.flatten = nn.Flatten()
-        self.fc = nn.Linear(2048, num_classes)
+        self.fc = nn.Linear(fc_cells, num_classes)
 
         self.softmax = nn.Softmax(dim=1)
 
@@ -81,7 +108,7 @@ class Resnet(nn.Module):
         x = self.flatten(x)
         x = self.fc(x)
 
-#         x = self.softmax(x)
+        # x = self.softmax(x)
 
         return x
 
@@ -94,28 +121,52 @@ class Resnet(nn.Module):
         :return:
             nn.Sequential的bottleneck
         """
-        in_channels, medium_channels, out_channels, kernel_size, stride, padding, layers_num = cfg
-        down_sample = None
-        if stride != 1 or in_channels != out_channels:
-            down_sample = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, padding=0),
-                nn.BatchNorm2d(out_channels)
-            )
+        if len(cfg) == 7:
+            """
+            resnet50、resnet101、resnet152模板
+            """
+            block = resnet_l_BasicBlock
+            in_channels, medium_channels, out_channels, kernel_size, stride, padding, layers_num = cfg
+            down_sample = None
+            if stride != 1 or in_channels != out_channels:
+                down_sample = nn.Sequential(
+                    nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, padding=0),
+                    nn.BatchNorm2d(out_channels)
+                )
 
-        layers = []
-        # 额外加入第一个basicblock，下采样basicblock一般在bottleneck第一位
-        layers.append(self.block(self.inplanes, medium_channels, out_channels, kernel_size, stride, padding, down_sample))
-        self.inplanes = out_channels
-        for _ in range(layers_num - 1):
-            layers.append(self.block(self.inplanes, medium_channels, out_channels))
+            layers = []
+            # 额外加入第一个basicblock，下采样basicblock一般在bottleneck第一位
+            layers.append(block(self.inplanes, medium_channels, out_channels, kernel_size, stride, padding, down_sample))
+            self.inplanes = out_channels
+            for _ in range(layers_num - 1):
+                layers.append(block(self.inplanes, medium_channels, out_channels))
+        else:
+            """
+            resnet18、resnet34模板
+            """
+            block = resnet_s_BasicBlock
+            in_channels, out_channels, kernel_size, stride, padding, layers_num = cfg
+            down_sample = None
+            if stride != 1 or in_channels != out_channels:
+                down_sample = nn.Sequential(
+                    nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, padding=0),
+                    nn.BatchNorm2d(out_channels)
+                )
+
+            layers = []
+            # 额外加入第一个basicblock，下采样basicblock一般在bottleneck第一位
+            layers.append(block(in_channels, out_channels, kernel_size, stride, padding, down_sample))
+            self.inplanes = out_channels
+            for _ in range(layers_num - 1):
+                layers.append(block(self.inplanes, out_channels))
 
         return nn.Sequential(*layers)
 
 
 class Resnet50(object):
-    def __init__(self, cfg: list, in_channels: int, block: nn.Module = BasicBlock, num_classes: int = 1000, pretrained=False):
+    def __init__(self, cfg: list, in_channels: int, num_classes: int = 1000, pretrained=False):
         super(Resnet50).__init__()
-        model = Resnet(cfg, in_channels, block, num_classes)
+        model = Resnet(cfg, in_channels, num_classes)
         if pretrained:
             state_dict = load_state_dict_from_url("https://download.pytorch.org/models/resnet50-19c8e357.pth",
                                                   model_dir="./model_data")
@@ -130,9 +181,22 @@ class Resnet50(object):
 
 
 if __name__ == '__main__':
-    cfg_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Faster-RCNN\model\config.json'
+    cfg_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\config.json'
     if not os.path.exists(cfg_path):
         cfg = {
+            "vgg16": [
+                [3, 64, 2],
+                [64, 128, 2],
+                [128, 256, 2],
+                [256, 512, 3],
+                [512, 512, 3]
+            ],
+            'resnet34': [
+                [64, 64, 3, 1, 1, 3],
+                [64, 128, 3, 2, 1, 4],
+                [128, 256, 3, 2, 1, 6],
+                [256, 512, 3, 2, 1, 3],
+            ],
             'resnet50': [
                 [64, 64, 256, 3, 1, 1, 3],
                 [256, 128, 512, 3, 2, 1, 4],
@@ -146,7 +210,7 @@ if __name__ == '__main__':
     with open(cfg_path, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    model = Resnet(cfg['resnet50'], 3, BasicBlock, 1)
+    model = Resnet(cfg['resnet50'], 3, 2)
     print(model)
     png = torch.randint(255, (1, 3, 224, 224)).float().to('cpu')
     out = model(png / 255.)
