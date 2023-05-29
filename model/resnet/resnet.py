@@ -21,7 +21,7 @@ class Conv2d(nn.Module):
 
 
 class BasicBlock(nn.Module):
-    def __init__(self, in_channels: int, medium_channels: int, out_channels: int, kernel_size: int = 3, stride: int = 1, padding: int = 0, down_sample=None):
+    def __init__(self, in_channels: int, medium_channels: int, out_channels: int, kernel_size: int = 3, stride: int = 1, padding: int = 1, down_sample=None):
         super(BasicBlock, self).__init__()
         self.down_sample = down_sample
         self.conv = nn.Sequential(
