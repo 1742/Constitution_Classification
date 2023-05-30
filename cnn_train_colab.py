@@ -18,8 +18,8 @@ from tools.evaluation_index import Accuracy, Confusion_matrix, Visualization
 
 
 # 我的数据存在谷歌云盘的舌象分割的文件夹里。。。
-data_path = r'/content/drive/MyDrive/Colab Notebooks/Tongue_Segmentation/data'
-data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Constitution_CLassification/data/img_names.txt'
+data_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/data'
+data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/data/img_names.txt'
 cfg_file = r'/content/Constitution_Classification/model/config.json'
 pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet18.pth'
 save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet'
