@@ -1,7 +1,11 @@
+import os
+import sys
+
 import torch
 from torchvision import transforms
 from torchvision.transforms import functional as F
 import numpy as np
+import math
 from PIL import Image
 import cv2
 import matplotlib.pyplot as plt
@@ -30,7 +34,93 @@ class RandomHorizontalFlip(object):
             if target is not None:
                 target = F.hflip(target)
                 return image, target
-        return image, target
+            return image
+        if target:
+            return image, target
+        return image
+
+
+class RandomResizedCrop(object):
+    def __init__(self, size, scale=(0.08, 1.0), ratio=(3.0 / 4.0, 4.0 / 3.0)):
+        self.size = size
+        self.scale = scale
+        self.ratio = ratio
+        # emmmm这个插值方法没法改，默认双线性插值
+
+    @staticmethod
+    def get_params(img: torch.Tensor, scale: list, ratio: list):
+        _, height, width = F.get_dimensions(img)
+        area = height * width
+
+        log_ratio = torch.log(torch.tensor(ratio))
+        for _ in range(10):
+            target_area = area * torch.empty(1).uniform_(scale[0], scale[1]).item()
+            aspect_ratio = torch.exp(torch.empty(1).uniform_(log_ratio[0], log_ratio[1])).item()
+
+            w = int(round(math.sqrt(target_area * aspect_ratio)))
+            h = int(round(math.sqrt(target_area / aspect_ratio)))
+
+            if 0 < w <= width and 0 < h <= height:
+                i = torch.randint(0, height - h + 1, size=(1,)).item()
+                j = torch.randint(0, width - w + 1, size=(1,)).item()
+                return i, j, h, w
+
+        # Fallback to central crop
+        in_ratio = float(width) / float(height)
+        if in_ratio < min(ratio):
+            w = width
+            h = int(round(w / min(ratio)))
+        elif in_ratio > max(ratio):
+            h = height
+            w = int(round(h * max(ratio)))
+        else:  # whole image
+            w = width
+            h = height
+        i = (height - h) // 2
+        j = (width - w) // 2
+        return i, j, h, w
+
+    def __call__(self, image, target=None):
+        i, j, h, w = self.get_params(image, self.scale, self.ratio)
+        image = F.resized_crop(image, i, j, h, w, self.size)
+        if target:
+            target = F.resized_crop(target, i, j, h, w, self.size)
+            return image, target
+        return image
+
+
+class RandomVerticalFlip(object):
+    def __init__(self, p=0.5):
+        self.p = p
+
+    def __call__(self, image, target=None):
+        if torch.rand(1) < self.p:
+            image = F.vflip(image)
+            if target:
+                target = F.vflip(target)
+                return image, target
+            return image
+        if target:
+            return image, target
+        return image
+
+
+class RandomRotation(object):
+    def __init__(self, degrees):
+        self.degrees = degrees
+
+    def get_params(self, degrees: list):
+        angle = float(torch.empty(1).uniform_(float(degrees[0]), float(degrees[1])).item())
+        return angle
+
+    def __call__(self, image, target=None):
+        angle = self.get_params(self.degrees)
+
+        image = F.rotate(image, angle)
+        if target:
+            target = F.rotate(target, angle)
+            return image, target
+        return image
 
 
 class ToTensor(object):
@@ -114,19 +204,35 @@ class ColorJitter(object):
 
 
 if __name__ == '__main__':
-    test_img_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Tongue_Segmentation-master\data\train\image\43.png'
+    data_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data\sx'
+    test_img_name = '20722.png'
+    test_face_path = os.path.join(data_path, 'face\\' + test_img_name)
+    test_tongue_path = os.path.join(data_path, 'tongue\\' + test_img_name)
 
-    img = Image.open(test_img_path).convert('RGB')
-    t = RGBToHSV()
-    y = t(img)
+    test_face_img = Image.open(test_face_path).convert('RGB')
+    test_tongue_img = Image.open(test_tongue_path).convert('RGB')
 
-    plt.subplot(211)
-    plt.imshow(y)
+    transformers = Compose([
+        Resize((224, 224)),
+        RandomHorizontalFlip(),
+        RandomVerticalFlip(),
+        RandomRotation((0, 15)),
+        ToTensor()
+    ])
 
-    plt.subplot(212)
-    img_1 = cv2.imread(test_img_path)
-    hsv = cv2.cvtColor(img_1, cv2.COLOR_BGR2HSV)
-    plt.imshow(hsv)
+    test_face_img_, test_tongue_img_ = transformers(test_face_img, test_tongue_img)
+
+    plt.subplot(221)
+    plt.imshow(test_face_img)
+
+    plt.subplot(222)
+    plt.imshow(test_face_img_.permute(1, 2, 0))
+
+    plt.subplot(223)
+    plt.imshow(test_tongue_img)
+
+    plt.subplot(224)
+    plt.imshow(test_tongue_img_.permute(1, 2, 0))
 
     plt.show()
 

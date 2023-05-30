@@ -8,7 +8,7 @@ from model.resnet.resnet import Resnet
 from torch.utils.data import Dataset, DataLoader
 from tools.dataloader import MyDatasets, shuffle, label_encoder
 from torchvision import transforms
-from tools.Mytransforms import Resize, ToTensor
+from tools.Mytransforms import Resize, RandomHorizontalFlip, RandomVerticalFlip, RandomRotation, ToTensor
 import numpy as np
 
 import os
@@ -216,6 +216,9 @@ if __name__ == '__main__':
 
     transformers = [
         Resize((224, 224)),
+        RandomHorizontalFlip(),
+        RandomVerticalFlip(),
+        RandomRotation((0, 15)),
         ToTensor()
     ]
 
