@@ -191,6 +191,12 @@ if __name__ == '__main__':
                 [256, 512, 3],
                 [512, 512, 3]
             ],
+            'resnet18': [
+                [64, 64, 3, 1, 1, 2],
+                [64, 128, 3, 2, 1, 2],
+                [128, 256, 3, 2, 1, 2],
+                [256, 512, 3, 2, 1, 2],
+            ],
             'resnet34': [
                 [64, 64, 3, 1, 1, 3],
                 [64, 128, 3, 2, 1, 4],
@@ -210,7 +216,7 @@ if __name__ == '__main__':
     with open(cfg_path, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    model = Resnet(cfg['resnet50'], 3, 2)
+    model = Resnet(cfg['resnet18'], 3, 2)
     print(model)
     png = torch.randint(255, (1, 3, 224, 224)).float().to('cpu')
     out = model(png / 255.)

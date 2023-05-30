@@ -6,7 +6,7 @@ from model.vgg.vgg import *
 from model.resnet.resnet import Resnet
 
 from torch.utils.data import Dataset, DataLoader
-from tools.dataloader import MyDatasets, shuffle, label_encoder
+from tools.dataloader_colab import MyDatasets, shuffle, label_encoder
 from torchvision import transforms
 from tools.Mytransforms import Resize, ToTensor
 import numpy as np
@@ -18,13 +18,13 @@ from tools.evaluation_index import Accuracy, Confusion_matrix, Visualization
 
 
 # 我的数据存在谷歌云盘的舌象分割的文件夹里。。。
-data_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/data'
-data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/data/img_names.txt'
+data_path = r'/content/drive/MyDrive/Colab Notebooks/Tongue_Segmentation/data'
+data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Constitution_CLassification/data/img_names.txt'
 cfg_file = r'/content/Constitution_Classification/model/config.json'
-pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet.pth'
+pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet18.pth'
 save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet'
-effect_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet50'
-save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet/resnet50.png'
+effect_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet18'
+save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet/resnet18.png'
 
 learning_rate = 1e-4
 weight_decay = 1e-8
@@ -227,9 +227,11 @@ if __name__ == '__main__':
     with open(cfg_file, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    # model = VGG16(cfg['vgg16'], 2)
+    # model = VGG16(cfg['vgg16'], 3)
+    # model = Multiple_Image_in_Decision_VGG16(cfg['vgg16'], 3)
+    model = Resnet(cfg['resnet18'], 3, 2)
     # model = Resnet(cfg['resnet34'], 3, 2)
-    model = Resnet(cfg['resnet50'], 3, 2)
+    # model = Resnet(cfg['resnet50'], 3, 2)
     optimizer = 'Adam'
     criterion = 'CELoss'
     # lr_schedule = {'name': 'ExponentialLR', 'gamma': 0.99}

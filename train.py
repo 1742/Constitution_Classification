@@ -21,10 +21,10 @@ import sys
 data_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data'
 data_path_txt = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data\img_names.txt'
 cfg_file = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\config.json'
-pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\model\resnet50.pth'
+pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\model\resnet18.pth'
 save_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet'
-effect_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet50'
-save_figure_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet50\result.png'
+effect_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet18\train'
+save_figure_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet18\train'
 
 learning_rate = 1e-4
 weight_decay = 1e-8
@@ -228,7 +228,9 @@ if __name__ == '__main__':
 
     # model = VGG16(cfg['vgg16'], 3)
     # model = Multiple_Image_in_Decision_VGG16(cfg['vgg16'], 3)
-    model = Resnet(cfg['resnet34'], 3, 2)
+    model = Resnet(cfg['resnet18'], 3, 2)
+    # model = Resnet(cfg['resnet34'], 3, 2)
+    # model = Resnet(cfg['resnet50'], 3, 2)
     optimizer = 'Adam'
     criterion = 'CELoss'
     # lr_schedule = {'name': 'ExponentialLR', 'gamma': 0.99}

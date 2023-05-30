@@ -2,7 +2,7 @@ import sys
 
 import torch
 from torch import nn
-from model.resnet.resnet import Resnet, BasicBlock
+from model.resnet.resnet import Resnet
 
 from torch.utils.data import Dataset, DataLoader
 from tools.dataloader import MyDatasets, shuffle, label_encoder
@@ -23,10 +23,9 @@ from tools.evaluation_index import Accuracy, Confusion_matrix, ROC_and_AUC, plot
 data_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data'
 data_path_txt = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data\img_names.txt'
 cfg_file = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\config.json'
-indicator_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs'
-pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\resnet50.pth'
-effect_path = r'runs\resnet50\result'
-save_predict_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet50\result\result.txt'
+pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\resnet34.pth'
+effect_path = r'runs\resnet34\test'
+save_predict_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet34\test\predict.txt'
 
 
 batch_size = 16
@@ -79,7 +78,7 @@ def predict(
 
     model.eval()
     with tqdm(total=len(test_dataloader)) as pbar:
-        pbar.set_description('loading: ')
+        pbar.set_description('loading')
 
         with torch.no_grad():
             for i, (face_img, tongue_img, label) in enumerate(test_dataloader):
@@ -169,7 +168,8 @@ if __name__ == '__main__':
     with open(cfg_file, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    model = Resnet(cfg['resnet50'], 3, BasicBlock, 2)
+    model = Resnet(cfg['resnet34'], 3, 2)
+    # model = Resnet(cfg['resnet50'], 3, 2)
 
     criterion = 'CELoss'
     print('model:\n', model)
