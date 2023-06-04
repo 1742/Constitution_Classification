@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch.hub import load_state_dict_from_url
+from torchvision import models
 import os
 import json
 
@@ -163,25 +163,47 @@ class Resnet(nn.Module):
         return nn.Sequential(*layers)
 
 
-class Resnet50(object):
-    def __init__(self, cfg: list, in_channels: int, num_classes: int = 1000, pretrained=False):
-        super(Resnet50).__init__()
-        model = Resnet(cfg, in_channels, num_classes)
-        if pretrained:
-            state_dict = load_state_dict_from_url("https://download.pytorch.org/models/resnet50-19c8e357.pth",
-                                                  model_dir="./model_data")
-            model.load_state_dict(state_dict)
+class pretrained_Resnet(object):
+    def __init__(self, model_name: str, device: str, in_channels: int, num_classes: int = 1000, pretrained_path: str = None):
+        super(pretrained_Resnet).__init__()
+        ori_model_dir = r'C:\Users\13632\.cache\torch\hub'
+        if pretrained_path:
+            if model_name == 'Resnet50' or model_name == 'resnet50':
+                model = models.resnet50()
+            elif model_name == 'Resnet34' or model_name == 'resnet34':
+                model = models.resnet34()
+            elif model_name == 'Resnet18' or model_name == 'resnet18':
+                model = models.resnet18()
+            model.load_state_dict(torch.load(pretrained_path, torch.device(device)))
+        else:
+            if model_name == 'Resnet50' or model_name == 'resnet50':
+                model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+            elif model_name == 'Resnet34' or model_name == 'resnet34':
+                model = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1)
+            elif model_name == 'Resnet18' or model_name == 'resnet18':
+                model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+        print('Successfully loaded pretrained weights.')
 
-        self.features = list([model.conv1, model.bn1, model.relu, model.maxpool, model.bottleneck_1,
-                              model.bottleneck_2, model.bottleneck_3])
-        self.classifier = list([model.bottleneck_4, model.avepool])
+        # 更改模型的输入和输出
+        model.conv1 = nn.Conv2d(in_channels, 64, 7, 2, 3)
+        num_ftrs = model.fc.in_features
+        model.fc = torch.nn.Linear(num_ftrs, num_classes)
+        self.features = model
+
+        if num_classes == 1:
+            self.classifier = nn.Sigmoid()
+        else:
+            self.classifier = nn.Softmax(dim=1)
 
     def __call__(self):
-        return nn.Sequential(*self.features), nn.Sequential(*self.classifier)
+        return nn.Sequential(self.features), nn.Sequential(self.classifier)
 
 
 if __name__ == '__main__':
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     cfg_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\config.json'
+    # pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\checkpoints\resnet34-b627a593.pth'
+
     if not os.path.exists(cfg_path):
         cfg = {
             "vgg16": [
@@ -216,16 +238,16 @@ if __name__ == '__main__':
     with open(cfg_path, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    model = Resnet(cfg['resnet18'], 3, 2)
-    print(model)
-    png = torch.randint(255, (1, 3, 224, 224)).float().to('cpu')
-    out = model(png / 255.)
-    print(out.size())
+    # model = Resnet(cfg['resnet18'], 3, 2)
+    # print(model)
+    # png = torch.randint(255, (1, 3, 224, 224)).float().to('cpu')
+    # out = model(png / 255.)
+    # print(out.size())
 
-    # model = Resnet50(cfg['resnet50'], 3, BasicBlock, 2)
-    # feature, classifier = model()
-    # print(feature)
-    # print(classifier)
+    resnet = pretrained_Resnet('resnet50', device, 3, 2)
+    feature, classifier = resnet()
+    print(feature)
+    print(classifier)
 
     # png = torch.randint(255, (1, 3, 224, 224)).float().to('cpu')
     # out = feature(png / 255.)
