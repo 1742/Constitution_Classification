@@ -2,7 +2,7 @@ import sys
 
 import torch
 from torch import nn
-from model.resnet.resnet import Resnet
+from model.resnet.resnet import Resnet, pretrained_Resnet
 
 from torch.utils.data import Dataset, DataLoader
 from tools.dataloader import MyDatasets, shuffle, label_encoder
@@ -23,9 +23,9 @@ from tools.evaluation_index import Accuracy, Confusion_matrix, ROC_and_AUC, plot
 data_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data'
 data_path_txt = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data\img_names.txt'
 cfg_file = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\config.json'
-pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\resnet34.pth'
-effect_path = r'runs\resnet34\test'
-save_predict_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet34\test\predict.txt'
+# pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\pretreatment_resnet34.pth'
+effect_path = r'runs\pretreatment_resnet34\effect.json'
+save_predict_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\{}\test\predict.txt'
 
 
 batch_size = 16
@@ -37,6 +37,7 @@ save_option = True
 
 def predict(
         device: str,
+        model_name: str,
         model: nn.Module,
         pretrained_path: str,
         batch_size: int,
@@ -46,6 +47,11 @@ def predict(
         save_option: bool
 ):
 
+    # 确保路径下没有predict.txt
+    if save_option:
+        if os.path.exists(save_predict_path.format(model_name)):
+            os.remove(save_predict_path.format(model_name))
+
     test_loss = 0
     test_acc = 0
     test_precision = 0
@@ -53,12 +59,13 @@ def predict(
     test_f1 = 0
 
     # 加载权重
-    if os.path.exists(pretrained_path):
-        model.load_state_dict(torch.load(pretrained_path, torch.device(device)))
-        print('Successfully load pretrained model from {}'.format(pretrained_path))
-    else:
-        print('model parameters files is not exist!')
-        sys.exit(0)
+    if pretrained_path:
+        if os.path.exists(pretrained_path):
+            model.load_state_dict(torch.load(pretrained_path, torch.device(device)))
+            print('Successfully load pretrained model from {}'.format(pretrained_path))
+        else:
+            print('model parameters files is not exist!')
+            sys.exit(0)
     model.to(device)
 
     test_dataloader = DataLoader(test_datasets, batch_size=batch_size, shuffle=False)
@@ -82,7 +89,7 @@ def predict(
 
         with torch.no_grad():
             for i, (face_img, tongue_img, label) in enumerate(test_dataloader):
-                face_img = face_img.to(device, dtype=torch.float)
+                # face_img = face_img.to(device, dtype=torch.float)
                 tongue_img = tongue_img.to(device, dtype=torch.float)
                 label = label.to(device, dtype=torch.long)
 
@@ -105,7 +112,7 @@ def predict(
                 pbar.set_postfix({criterion_name: loss.item(), 'acc': acc, 'precision': precision, 'recall': recall, 'f1': f1})
 
                 if save_option:
-                    with open(save_predict_path, 'a', encoding='utf-8') as f:
+                    with open(save_predict_path.format(model_name), 'a', encoding='utf-8') as f:
                         for bs in range(pred.size(0)):
                             f.write('{} pred: {} label: {}\n'.format(str(i * batch_size + bs), str(pred[bs].tolist()), str(label[bs].tolist())))
 
@@ -116,19 +123,19 @@ def predict(
     test_precision = test_precision / len(test_dataloader)
     test_recall = test_recall / len(test_dataloader)
     test_f1 = test_f1 / len(test_dataloader)
-    if save_option:
-        with open(save_predict_path, 'a', encoding='utf-8') as f:
-            f.write('{}: {}  acc: {:.3f}  precision: {:.3f}  recall: {:.3f}  f1: {:.3f}'.format(criterion_name, test_loss,
-                                                                                             test_acc, test_precision,
-                                                                                             test_recall, test_f1))
+
+    with open(save_predict_path.format(model_name), 'a', encoding='utf-8') as f:
+        f.write('{}: {:.3f}  acc: {:.3f}  precision: {:.3f}  recall: {:.3f}  f1: {:.3f}'.format(criterion_name, test_loss,
+                                                                                         test_acc, test_precision,
+                                                                                         test_recall, test_f1))
 
     # 绘制ROC曲线
-    fpr, tpr, roc_auc = ROC_and_AUC(test_outputs, test_labels, refer_labels, smooth=True)
+    fpr, tpr, roc_auc = ROC_and_AUC(test_outputs, test_labels, refer_labels)
     plot_ROC(fpr, tpr, roc_auc, len(refer_labels))
 
     return {
         'num': len(test_dataloader), 'loss': test_loss, 'acc': test_acc, 'precision': test_precision,
-        'recall': test_recall, 'f1': f1
+        'recall': test_recall, 'f1': f1, 'ROC': [fpr, tpr, roc_auc]
     }
 
 
@@ -164,26 +171,50 @@ if __name__ == '__main__':
 
     test_datasets = MyDatasets(data_path, labels, test_data_info, transformers)
 
+    models = {
+        'resnet50': r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\resnet50.pth',
+        'resnet34': r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\resnet34.pth',
+        'pretreatment_resnet34': r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\pretreatment_resnet34.pth',
+        'pretrained_resnet34': r'C:\Users\13632\.cache\torch\hub\checkpoints\resnet34-b627a593.pth'
+    }
+    ROC = {'fpr': [], 'tpr': [], 'auc': []}
     # 读取模型结构
     with open(cfg_file, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    model = Resnet(cfg['resnet34'], 3, 2)
-    # model = Resnet(cfg['resnet50'], 3, 2)
+    model_name = []
+    for m, pretrained_path in models.items():
+        model_name.append(m)
 
-    criterion = 'CELoss'
-    print('model:\n', model)
-    print('loss:', criterion)
+        if m == 'pretreatment_resnet34':
+            model = Resnet(cfg['resnet34'], 3, 2)
+        elif 'pretrained' in m:
+            model = pretrained_Resnet(m.split('_')[-1], device, 3, 2)
+            model = nn.Sequential(model.features)
+            pretrained_path = None
+        else:
+            model = Resnet(cfg[m], 3, 2)
 
-    effect = predict(
-        device=device,
-        model=model,
-        batch_size=batch_size,
-        test_datasets=test_datasets,
-        refer_labels=refer_labels,
-        criterion_name=criterion,
-        pretrained_path=pretrained_path,
-        save_option=True
-    )
+        criterion = 'CELoss'
+        print('model:\n', model)
+        print('loss:', criterion)
+
+        effect = predict(
+            device=device,
+            model_name=m,
+            model=model,
+            batch_size=batch_size,
+            test_datasets=test_datasets,
+            refer_labels=refer_labels,
+            criterion_name=criterion,
+            pretrained_path=pretrained_path,
+            save_option=True
+        )
+
+        ROC['fpr'].append(effect['ROC'][0])
+        ROC['tpr'].append(effect['ROC'][1])
+        ROC['auc'].append(effect['ROC'][2])
+
+    plot_ROC(ROC['fpr'], ROC['tpr'], ROC['auc'], len(refer_labels), len(model_name), model_name)
 
     # Visualization(effect, False)

@@ -3,7 +3,7 @@ import sys
 import torch
 from torch import nn
 from model.vgg.vgg import *
-from model.resnet.resnet import Resnet
+from model.resnet.resnet import Resnet, pretrained_Resnet
 
 from torch.utils.data import Dataset, DataLoader
 from tools.dataloader import MyDatasets, shuffle, label_encoder
@@ -21,10 +21,10 @@ import sys
 data_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data'
 data_path_txt = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data\img_names.txt'
 cfg_file = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\config.json'
-pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\model\resnet18.pth'
+pretrained_path = r'C:\Users\13632\.cache\torch\hub\checkpoints\resnet34-b627a593.pth'
 save_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet'
-effect_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet18\train'
-save_figure_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet18\train'
+effect_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet34\train'
+save_figure_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet34\train'
 
 learning_rate = 1e-4
 weight_decay = 1e-8
@@ -32,7 +32,7 @@ epochs = 5
 batch_size = 64
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('The train will run in {} ...'.format(device))
-pretrained = False
+pretrained = True
 save_option = True
 
 
@@ -48,10 +48,10 @@ def train(
         weight_decay: float,
         optim: str,
         criterion_name: str,
-        pretrained: bool,
+        pretrained_path: [str, None],
         save_option: bool,
         lr_schedule: dict = None
-        ):
+):
 
     # 返回指标
     train_loss = []
@@ -65,10 +65,11 @@ def train(
     val_recall = []
     val_f1 = []
 
-    if pretrained:
+    # 加载权重
+    if pretrained_path:
         if os.path.exists(pretrained_path):
-            model.load_state_dict(torch.load(pretrained_path))
-            print('Successfully load pretrained model from {}!'.format(pretrained_path))
+            model.load_state_dict(torch.load(pretrained_path, torch.device(device)))
+            print('Successfully load pretrained model from {}'.format(pretrained_path))
         else:
             print('model parameters files is not exist!')
             sys.exit(0)
@@ -180,7 +181,7 @@ def train(
         val_f1.append(per_val_f1 / len(val_dataloader))
 
     if save_option:
-        torch.save(model.state_dict(), os.path.join(save_path, 'vgg16.pth'))
+        torch.save(model.state_dict(), os.path.join(save_path, 'pretrained_resnet34.pth'))
 
     return {
         'epoch': epochs, 'loss': [train_loss, val_loss], 'acc': [train_acc, val_acc],
@@ -214,16 +215,20 @@ if __name__ == '__main__':
     print('val_data_num:', len(val_data_info))
     print('test_data_num:', len(test_data_info))
 
-    transformers = [
+    train_transformers = [
         Resize((224, 224)),
         RandomHorizontalFlip(),
-        RandomVerticalFlip(),
+        # RandomVerticalFlip(),
         RandomRotation((0, 15)),
         ToTensor()
     ]
+    val_transformers = [
+        Resize((224, 224)),
+        ToTensor()
+    ]
 
-    train_datasets = MyDatasets(data_path, labels, train_data_info, transformers)
-    val_datasets = MyDatasets(data_path, labels, test_data_info, transformers)
+    train_datasets = MyDatasets(data_path, labels, train_data_info, train_transformers)
+    val_datasets = MyDatasets(data_path, labels, test_data_info, val_transformers)
 
     # 读取模型结构
     with open(cfg_file, 'r', encoding='utf-8') as f:
@@ -231,9 +236,13 @@ if __name__ == '__main__':
 
     # model = VGG16(cfg['vgg16'], 3)
     # model = Multiple_Image_in_Decision_VGG16(cfg['vgg16'], 3)
-    model = Resnet(cfg['resnet18'], 3, 2)
+    # model = Resnet(cfg['resnet18'], 3, 2)
     # model = Resnet(cfg['resnet34'], 3, 2)
     # model = Resnet(cfg['resnet50'], 3, 2)
+    # 迁移学习
+    model = pretrained_Resnet('resnet34', device, 3, 2, pretrained_path=pretrained_path).features
+    pretrained_path = None
+
     optimizer = 'Adam'
     criterion = 'CELoss'
     # lr_schedule = {'name': 'ExponentialLR', 'gamma': 0.99}
@@ -259,7 +268,7 @@ if __name__ == '__main__':
         weight_decay=weight_decay,
         optim=optimizer,
         criterion_name=criterion,
-        pretrained=pretrained,
+        pretrained_path=pretrained_path,
         save_option=save_option,
         lr_schedule=lr_schedule
     )
