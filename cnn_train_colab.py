@@ -243,12 +243,12 @@ if __name__ == '__main__':
     # 迁移学习
     # model = pretrained_Resnet(model_name, device, 3, 2, pretrained_path=pretrained_path).features
     # SE-Resnet34
-    model = SE_Resnet(model_name, device, 3, 2)
+    model = SE_Resnet(cfg[model_name], 3, 2)
     pretrained_path = None
 
     optimizer = 'Adam'
     criterion = 'CELoss'
-    lr_schedule = {'name': 'StepLR', 'gamma': 0.9}
+    lr_schedule = {'name': 'StepLR', 'step_size': 5, 'gamma': 0.9}
     # lr_schedule = None
     print('model:\n', model)
     print('epoch:', epochs)
