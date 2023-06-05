@@ -248,8 +248,8 @@ if __name__ == '__main__':
 
     optimizer = 'Adam'
     criterion = 'CELoss'
-    # lr_schedule = {'name': 'ExponentialLR', 'gamma': 0.99}
-    lr_schedule = None
+    lr_schedule = {'name': 'StepLR', 'gamma': 0.9}
+    # lr_schedule = None
     print('model:\n', model)
     print('epoch:', epochs)
     print('batch size:', batch_size)
