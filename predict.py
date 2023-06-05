@@ -146,6 +146,9 @@ if __name__ == '__main__':
 
     # 在计算混淆矩阵时需传入参考标签的序号，防止输入的predict和labels不含有某一类别
     refer_labels = list(label_encoder(labels).values())
+    # refer_labels = label_encoder(labels)
+    # print(refer_labels)
+    # sys.exit(0)
 
     # 划分数据集
     with open(data_path_txt, 'r', encoding='utf-8') as f:

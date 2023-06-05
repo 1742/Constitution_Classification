@@ -188,15 +188,29 @@ class pretrained_Resnet(object):
         model.conv1 = nn.Conv2d(in_channels, 64, 7, 2, 3)
         num_ftrs = model.fc.in_features
         model.fc = torch.nn.Linear(num_ftrs, num_classes)
-        self.features = model
+        children = list(model.children())
+
+        self.features = children[:-1]
 
         if num_classes == 1:
-            self.classifier = nn.Sigmoid()
+            self.classifier = nn.Sequential(
+                nn.Flatten(),
+                children[-1],
+                nn.Sigmoid()
+            )
         else:
-            self.classifier = nn.Softmax(dim=1)
+            self.classifier = self.classifier = nn.Sequential(
+                nn.Flatten(),
+                children[-1],
+                nn.Softmax(dim=1)
+            )
 
-    def __call__(self):
-        return nn.Sequential(self.features), nn.Sequential(self.classifier)
+    def __call__(self, divide: bool = True):
+        if divide:
+            return nn.Sequential(*self.features), self.classifier
+        else:
+            self.features.append(self.classifier)
+            return nn.Sequential(*self.features)
 
 
 if __name__ == '__main__':
@@ -244,12 +258,13 @@ if __name__ == '__main__':
     # out = model(png / 255.)
     # print(out.size())
 
-    resnet = pretrained_Resnet('resnet50', device, 3, 2)
+    resnet = pretrained_Resnet('resnet34', device, 3, 2)
     feature, classifier = resnet()
     print(feature)
     print(classifier)
 
-    # png = torch.randint(255, (1, 3, 224, 224)).float().to('cpu')
-    # out = feature(png / 255.)
-    # print(out.size())
+    png = torch.randint(255, (1, 3, 224, 224)).float().to('cpu')
+    out = feature(png / 255.)
+    out = classifier(out)
+    print(out.size())
 

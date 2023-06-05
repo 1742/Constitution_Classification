@@ -100,11 +100,11 @@ class GradCAM:
             img = F.interpolate(img, size=self.ori_img_size, mode='bilinear', align_corners=False)
         img = (img * 255).squeeze().permute(1, 2, 0).cpu().numpy().astype(np.uint8)
         # 将灰度图cam按数值生成热力图，仅将cam中不为0的部分转换成热力图
-        # mask = (grad_cam != 0).astype(np.uint8)
+        mask = (grad_cam != 0).astype(np.uint8)
         heatmap = cv2.applyColorMap((grad_cam * 255).astype(np.uint8), cv2.COLORMAP_JET)
         # heatmap = heatmap * mask
         # 按热力图与原图融合并重新归一化
-        result = img + 0.4*heatmap
+        result = 0.7 * img + 0.3 * heatmap
         result = (result / result.max() * 255).astype(np.uint8)
 
         return result

@@ -24,8 +24,8 @@ from tools.grad_cam import GradCAM
 data_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data'
 data_path_txt = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data\img_names.txt'
 cfg_file = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\config.json'
-pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\resnet50.pth'
-save_gradcam_picture_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet50\test\grad_cam'
+pretrained_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\pretreatment_resnet34.pth'
+save_gradcam_picture_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\pretreatment_resnet34\test\grad_cam'
 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -38,11 +38,10 @@ restore_scale = 2
 def generate_gradcam(
         device: str,
         model: nn.Module,
-        criterion_name: str,
         target_layer: [str, nn.Module],
         ori_img_size: [list, tuple],
         test_datasets: MyDatasets,
-        refer_labels: list,
+        refer_labels: dict,
         pretrained_path: str,
         save_option: bool,
 ):
@@ -56,11 +55,6 @@ def generate_gradcam(
     model.to(device)
 
     test_dataloader = DataLoader(test_datasets, batch_size=1, shuffle=False)
-
-    if criterion_name == 'BCELoss':
-        criterion = nn.BCELoss()
-    elif criterion_name == 'CELoss' or criterion_name == 'CrossEntropyLoss':
-        criterion = nn.CrossEntropyLoss()
 
     # 实例化GradCAM
     gradcam = GradCAM(model, target_layer, ori_img_size)
@@ -82,10 +76,19 @@ def generate_gradcam(
                 # 保存grad_cam图
                 _, grad_cam_pic = gradcam(tongue_img)
                 for cam in grad_cam_pic:
+                    # 转换tongue_img和cam为图片
+                    tongue_img = Image.fromarray(np.array((tongue_img * 255).squeeze().permute(1, 2, 0), dtype=np.uint8)).convert('RGB')
                     cam = Image.fromarray(cam).convert('RGB')
+
+                    # 拼接原图和cam
+                    size = cam.size
+                    result = Image.new('RGB', (size[0] * 2, size[1]), 0)
+                    result.paste(tongue_img, (0, 0))
+                    result.paste(cam, (size[0] + 1, 0))
+
                     # 打上指标
-                    plt.imshow(cam)
-                    plt.title('pred: {}  label: {}'.format(int(pred), int(label)))
+                    plt.imshow(result)
+                    plt.title('pred: {}  label: {}'.format(refer_labels[int(pred)], refer_labels[int(label)]))
                     plt.axis('off')
                     plt.savefig(save_gradcam_picture_path + '\\{}.png'.format(i))
 
@@ -97,8 +100,12 @@ if __name__ == '__main__':
     if 'img_names.txt' in labels:
         labels.remove('img_names.txt')
 
-    # 在计算混淆矩阵时需传入参考标签的序号，防止输入的predict和labels不含有某一类别
-    refer_labels = list(label_encoder(labels).values())
+    # 用于在生成图片时打上标签
+    refer_labels = dict()
+    labels = label_encoder(labels)
+    items = labels.items()
+    for value, key in items:
+        refer_labels[key] = value
 
     # 划分数据集
     with open(data_path_txt, 'r', encoding='utf-8') as f:
@@ -132,13 +139,10 @@ if __name__ == '__main__':
     with open(cfg_file, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    model = Resnet(cfg['resnet50'], 3, 2)
-
-    criterion = 'CELoss'
-    print('loss:', criterion)
+    model = Resnet(cfg['resnet34'], 3, 2)
 
     # gradcam目标层
-    target_layer = model.bottleneck_4[-1].conv[-1].conv
+    target_layer = model.bottleneck_4[-1].conv[-2]
     print('target layer:', target_layer)
 
     generate_gradcam(
@@ -146,7 +150,6 @@ if __name__ == '__main__':
         model=model,
         test_datasets=test_datasets,
         refer_labels=refer_labels,
-        criterion_name=criterion,
         target_layer=target_layer,
         ori_img_size=None,
         pretrained_path=pretrained_path,

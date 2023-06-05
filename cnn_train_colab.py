@@ -4,6 +4,7 @@ import torch
 from torch import nn
 from model.vgg.vgg import *
 from model.resnet.resnet import Resnet, pretrained_Resnet
+from model.SE_Resnet.SE_Resnet import SE_Resnet
 
 from torch.utils.data import Dataset, DataLoader
 from tools.dataloader import MyDatasets, shuffle, label_encoder
@@ -17,11 +18,10 @@ from tqdm import tqdm
 from tools.evaluation_index import Accuracy, Confusion_matrix, Visualization
 
 
-# 我的数据存在谷歌云盘的舌象分割的文件夹里。。。
 data_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/data'
 data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/data/img_names.txt'
 cfg_file = r'/content/Constitution_Classification/model/config.json'
-pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet34-b627a593.pth'
+# pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet34-b627a593.pth'
 save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet'
 effect_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/pretrained_resnet34'
 save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet/resnet34.png'
@@ -32,7 +32,6 @@ epochs = 50
 batch_size = 64
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('The train will run in {} ...'.format(device))
-pretrained = False
 save_option = True
 
 
@@ -106,7 +105,7 @@ def train(
             pbar.set_description('epoch - {} train'.format(epoch+1))
 
             for i, (face_img, tongue_img, label) in enumerate(train_dataloader):
-                face_img = face_img.to(device, dtype=torch.float)
+                # face_img = face_img.to(device, dtype=torch.float)
                 tongue_img = tongue_img.to(device, dtype=torch.float)
                 label = label.to(device, dtype=torch.long)
 
@@ -151,7 +150,7 @@ def train(
 
             with torch.no_grad():
                 for i, (face_img, tongue_img, label) in enumerate(val_dataloader):
-                    face_img = face_img.to(device, dtype=torch.float)
+                    # face_img = face_img.to(device, dtype=torch.float)
                     tongue_img = tongue_img.to(device, dtype=torch.float)
                     label = label.to(device, dtype=torch.long)
 
@@ -235,13 +234,16 @@ if __name__ == '__main__':
     with open(cfg_file, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    # model = VGG16(cfg['vgg16'], 3)
-    # model = Multiple_Image_in_Decision_VGG16(cfg['vgg16'], 3)
-    # model = Resnet(cfg['resnet18'], 3, 2)
-    # model = Resnet(cfg['resnet34'], 3, 2)
-    # model = Resnet(cfg['resnet50'], 3, 2)
+    model_name = 'resnet34'
+    # model = VGG16(cfg[model_name], 3)
+    # model = Multiple_Image_in_Decision_VGG16(cfg[model_name], 3)
+    # model = Resnet(cfg[model_name], 3, 2)
+    # model = Resnet(cfg[model_name], 3, 2)
+    # model = Resnet(cfg[model_name], 3, 2)
     # 迁移学习
-    model = pretrained_Resnet('resnet34', device, 3, 2, pretrained_path=pretrained_path).features
+    # model = pretrained_Resnet(model_name, device, 3, 2, pretrained_path=pretrained_path).features
+    # SE-Resnet34
+    model = SE_Resnet(model_name, device, 3, 2)
     pretrained_path = None
 
     optimizer = 'Adam'
