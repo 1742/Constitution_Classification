@@ -23,8 +23,8 @@ data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classifica
 cfg_file = r'/content/Constitution_Classification/model/config.json'
 # pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet34-b627a593.pth'
 save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet'
-effect_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/pretrained_resnet34'
-save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet/resnet34.png'
+effect_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/{}'
+save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet/{}.png'
 
 learning_rate = 1e-4
 weight_decay = 1e-8
@@ -38,6 +38,7 @@ save_option = True
 def train(
         device: str,
         model: nn.Module,
+        model_name: str,
         trian_datasets: Dataset,
         val_datasets: Dataset,
         refer_labels: list,
@@ -178,7 +179,7 @@ def train(
         val_f1.append(per_val_f1 / len(val_dataloader))
 
     if save_option:
-        torch.save(model.state_dict(), os.path.join(save_path, 'pretrained_resnet34.pth'))
+        torch.save(model.state_dict(), os.path.join(save_path, '{}.pth'.format(model_name)))
         print('Successfully save weights file in {}'.format(save_path))
 
     return {
@@ -262,6 +263,7 @@ if __name__ == '__main__':
     effect = train(
         device=device,
         model=model,
+        model_name=model_name,
         trian_datasets=train_datasets,
         val_datasets=val_datasets,
         refer_labels=refer_labels,
@@ -276,7 +278,7 @@ if __name__ == '__main__':
         lr_schedule=lr_schedule
     )
 
-    if not os.path.exists(effect_path):
+    if not os.path.exists(effect_path.format(model_name)):
         os.mkdir(effect_path)
     with open(effect_path+'/effect.json', 'w', encoding='utf-8') as f:
         f.write(json.dumps(effect))

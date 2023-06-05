@@ -116,20 +116,14 @@ class SE_l_BasicBlock(nn.Module):
 
         self.relu = nn.ReLU(inplace=True)
 
-        self.se_block = nn.Sequential(
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Conv2d(out_channels, int(out_channels / r), 1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(int(out_channels / r), out_channels, 1),
-            nn.Sigmoid()
-        )
+        self.se_block = SE_Block(out_channels, r)
 
     def forward(self, x):
         res = x
         x = self.conv(x)
 
         x_se = self.se_block(x)
-        x += x_se
+        x = x * x_se
 
         if self.down_sample is not None:
             res = self.down_sample(res)
@@ -151,6 +145,26 @@ class SE_s_BasicBlock(nn.Module):
 
         self.relu = nn.ReLU(inplace=True)
 
+        self.se_block = SE_Block(out_channels, r)
+
+    def forward(self, x):
+        res = x
+        x = self.conv(x)
+
+        x_se = self.se_block(x)
+        x = x * x_se
+
+        if self.down_sample is not None:
+            res = self.down_sample(res)
+
+        out = self.relu(x + res)
+
+        return out
+
+
+class SE_Block(nn.Module):
+    def __init__(self, out_channels: int, r: int = 16):
+        super(SE_Block, self).__init__()
         self.se_block = nn.Sequential(
             nn.AdaptiveAvgPool2d((1, 1)),
             nn.Conv2d(out_channels, int(out_channels / r), 1),
@@ -160,18 +174,7 @@ class SE_s_BasicBlock(nn.Module):
         )
 
     def forward(self, x):
-        res = x
-        x = self.conv(x)
-
-        x_se = self.se_block(x)
-        x += x_se
-
-        if self.down_sample is not None:
-            res = self.down_sample(res)
-
-        out = self.relu(x + res)
-
-        return out
+        return self.se_block(x)
 
 
 if __name__ == '__main__':
