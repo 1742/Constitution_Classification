@@ -27,7 +27,7 @@ save_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constit
 effect_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet34\train'
 save_figure_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\resnet34\train'
 
-learning_rate = 1e-4
+learning_rate = 1e-3
 weight_decay = 1e-8
 epochs = 5
 batch_size = 64
@@ -48,9 +48,9 @@ def train(
         weight_decay: float,
         optim: str,
         criterion_name: str,
-        pretrained_path: [str, None],
         save_option: bool,
-        lr_schedule: dict = None
+        lr_schedule: dict = None,
+        pretrained_path: str = None,
 ):
 
     # 返回指标
@@ -73,7 +73,7 @@ def train(
         else:
             print('model parameters files is not exist!')
             sys.exit(0)
-    model.to(device)
+    model.to(torch.device(device))
 
     train_dataloader = DataLoader(trian_datasets, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_datasets, batch_size=batch_size, shuffle=True)
@@ -271,9 +271,9 @@ if __name__ == '__main__':
         weight_decay=weight_decay,
         optim=optimizer,
         criterion_name=criterion,
-        pretrained_path=pretrained_path,
         save_option=save_option,
-        lr_schedule=lr_schedule
+        lr_schedule=lr_schedule,
+        pretrained_path=pretrained_path,
     )
 
     if not os.path.exists(effect_path):
