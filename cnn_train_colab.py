@@ -123,7 +123,7 @@ def train(
             for i, (face_img, tongue_img, label) in enumerate(train_dataloader):
                 # face_img = face_img.to(device, dtype=torch.float)
                 tongue_img = tongue_img.to(device, dtype=torch.float)
-                label = label.to(device, dtype=torch.long)
+                label = label.to(device, dtype=torch.float)
 
                 if model_name == 'SRAU':
                     output, var = model(tongue_img)
@@ -175,7 +175,7 @@ def train(
                 for i, (face_img, tongue_img, label) in enumerate(val_dataloader):
                     # face_img = face_img.to(device, dtype=torch.float)
                     tongue_img = tongue_img.to(device, dtype=torch.float)
-                    label = label.to(device, dtype=torch.long)
+                    label = label.to(device, dtype=torch.float)
 
                     if model_name == 'SRAU':
                         output, var = model(tongue_img)
