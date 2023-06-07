@@ -32,7 +32,7 @@ class MyDatasets(Dataset):
         tongue_img = Image.open(tongue_img_path).convert('RGB')
         # 数据增强
         face_img, tongue_img = self.transformers(face_img, tongue_img)
-        label = self.labels[label]
+        label = torch.Tensor([self.labels[label]])
 
         return face_img, tongue_img, label
 
@@ -96,6 +96,7 @@ if __name__ == '__main__':
         Resize((224, 224)),
         ToTensor()
     ]
+
     test_datasets = MyDatasets(data_path, label, img_info, transformers)
     face_img, tongue_img, label = test_datasets.__getitem__(1)
     plt.subplot(1, 2, 1)
