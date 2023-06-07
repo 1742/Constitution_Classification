@@ -12,6 +12,11 @@ import json
 class SE_Resnet(nn.Module):
     def __init__(self, cfg: list, in_channels: int, num_classes: int = 1000):
         super(SE_Resnet, self).__init__()
+        if num_classes == 2:
+            self.num_classess = 1
+        else:
+            self.num_classess = num_classes
+
         if len(cfg[0]) == 7:
             fc_cells = 2048
         else:
@@ -30,9 +35,12 @@ class SE_Resnet(nn.Module):
 
         self.avepool = nn.AdaptiveAvgPool2d((1, 1))
         self.flatten = nn.Flatten()
-        self.fc = nn.Linear(fc_cells, num_classes)
+        self.fc = nn.Linear(fc_cells, self.num_classess)
 
-        self.softmax = nn.Softmax(dim=1)
+        if self.num_classess == 1:
+            self.out = nn.Sigmoid()
+        else:
+            self.out = nn.Softmax(dim=1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -49,7 +57,8 @@ class SE_Resnet(nn.Module):
         x = self.flatten(x)
         x = self.fc(x)
 
-        # x = self.softmax(x)
+        if self.num_classess == 1:
+            x = self.out(x)
 
         return x
 

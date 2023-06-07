@@ -71,6 +71,11 @@ class resnet_s_BasicBlock(nn.Module):
 class Resnet(nn.Module):
     def __init__(self, cfg: list, in_channels: int, num_classes: int = 1000):
         super(Resnet, self).__init__()
+        if num_classes == 2:
+            self.num_classess = 1
+        else:
+            self.num_classess = num_classes
+
         if len(cfg[0]) == 7:
             fc_cells = 2048
         else:
@@ -87,11 +92,14 @@ class Resnet(nn.Module):
         self.bottleneck_3 = self._make_bottleneck(cfg[2])
         self.bottleneck_4 = self._make_bottleneck(cfg[3])
 
-        self.avepool = nn.AvgPool2d(7)
+        self.avepool = nn.AdaptiveAvgPool2d((1, 1))
         self.flatten = nn.Flatten()
-        self.fc = nn.Linear(fc_cells, num_classes)
+        self.fc = nn.Linear(fc_cells, self.num_classess)
 
-        self.softmax = nn.Softmax(dim=1)
+        if self.num_classess == 1:
+            self.out = nn.Sigmoid()
+        else:
+            self.out = nn.Softmax(dim=1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -108,7 +116,9 @@ class Resnet(nn.Module):
         x = self.flatten(x)
         x = self.fc(x)
 
-        # x = self.softmax(x)
+        # CELoss自带Softmax,怒
+        if self.num_classess == 1:
+            x = self.out(x)
 
         return x
 
@@ -167,6 +177,12 @@ class pretrained_Resnet(object):
     def __init__(self, model_name: str, device: str, in_channels: int, num_classes: int = 1000, pretrained_path: str = None):
         super(pretrained_Resnet).__init__()
         ori_model_dir = r'C:\Users\13632\.cache\torch\hub'
+        if num_classes == 2:
+            num_classes = 1
+            out = nn.Sigmoid()
+        else:
+            out = nn.Softmax(dim=1)
+
         if pretrained_path:
             if model_name == 'Resnet50' or model_name == 'resnet50':
                 model = models.resnet50()
@@ -196,13 +212,13 @@ class pretrained_Resnet(object):
             self.classifier = nn.Sequential(
                 nn.Flatten(),
                 children[-1],
-                nn.Sigmoid()
+                out
             )
         else:
             self.classifier = self.classifier = nn.Sequential(
                 nn.Flatten(),
                 children[-1],
-                nn.Softmax(dim=1)
+                out
             )
 
     def __call__(self, divide: bool = True):
@@ -252,19 +268,19 @@ if __name__ == '__main__':
     with open(cfg_path, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    # model = Resnet(cfg['resnet18'], 3, 2)
-    # print(model)
-    # png = torch.randint(255, (1, 3, 224, 224)).float().to('cpu')
-    # out = model(png / 255.)
-    # print(out.size())
-
-    resnet = pretrained_Resnet('resnet34', device, 3, 2)
-    feature, classifier = resnet()
-    print(feature)
-    print(classifier)
-
+    model = Resnet(cfg['resnet18'], 3, 2)
+    print(model)
     png = torch.randint(255, (1, 3, 224, 224)).float().to('cpu')
-    out = feature(png / 255.)
-    out = classifier(out)
+    out = model(png / 255.)
     print(out.size())
+
+    # resnet = pretrained_Resnet('resnet34', device, 3, 2)
+    # feature, classifier = resnet()
+    # print(feature)
+    # print(classifier)
+
+    # png = torch.randint(255, (1, 3, 224, 224)).float().to('cpu')
+    # out = feature(png / 255.)
+    # out = classifier(out)
+    # print(out.size())
 
