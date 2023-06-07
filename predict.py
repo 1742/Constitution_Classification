@@ -3,6 +3,7 @@ import sys
 import torch
 from torch import nn
 from model.resnet.resnet import Resnet, pretrained_Resnet
+from model.SE_Resnet.SE_Resnet import SE_Resnet
 
 from torch.utils.data import Dataset, DataLoader
 from tools.dataloader import MyDatasets, shuffle, label_encoder
@@ -178,7 +179,8 @@ if __name__ == '__main__':
         'resnet50': r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\resnet50.pth',
         'resnet34': r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\resnet34.pth',
         'pretreatment_resnet34': r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\pretreatment_resnet34.pth',
-        'pretrained_resnet34': r'C:\Users\13632\.cache\torch\hub\checkpoints\resnet34-b627a593.pth'
+        'pretrained_resnet34': r'C:\Users\13632\.cache\torch\hub\checkpoints\resnet34-b627a593.pth',
+        'SE-Resnet34': r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet\se_resnet34.pth'
     }
     ROC = {'fpr': [], 'tpr': [], 'auc': []}
     # 读取模型结构
@@ -189,12 +191,18 @@ if __name__ == '__main__':
     for m, pretrained_path in models.items():
         model_name.append(m)
 
-        if m == 'pretreatment_resnet34':
-            model = Resnet(cfg['resnet34'], 3, 2)
-        elif 'pretrained' in m:
-            model = pretrained_Resnet(m.split('_')[-1], device, 3, 2)
-            model = nn.Sequential(model.features)
+        if m == 'SE-Resnet34':
+            model = SE_Resnet(cfg['resnet34'], 3, 2)
+        elif m == 'pretrained_resnet34':
+            model = pretrained_Resnet('resnet34', device, 3, 2)
+            features, _ = model()
+            model = list(features.children())
+            model.append(nn.Flatten())
+            model.append(nn.Linear(512, 2))
+            model = nn.Sequential(*model)
             pretrained_path = None
+        elif m == 'pretreatment_resnet34':
+            model = Resnet(cfg['resnet34'], 3, 2)
         else:
             model = Resnet(cfg[m], 3, 2)
 

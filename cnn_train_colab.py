@@ -5,6 +5,8 @@ from torch import nn
 from model.vgg.vgg import *
 from model.resnet.resnet import Resnet, pretrained_Resnet
 from model.SE_Resnet.SE_Resnet import SE_Resnet
+from model.SRAU.SRAU import SRAU
+from tools.MyLoss import M_and_D_UncLoss
 
 from torch.utils.data import Dataset, DataLoader
 from tools.dataloader import MyDatasets, shuffle, label_encoder
@@ -24,7 +26,16 @@ cfg_file = r'/content/Constitution_Classification/model/config.json'
 pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet34-b627a593.pth'
 save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet'
 effect_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/{}'
-save_figure_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/resnet/{}.png'
+
+
+model_class = {
+    'vgg16': VGG16,
+    'resnet34': Resnet,
+    'resnet50': Resnet,
+    'SE-Resnet34': SE_Resnet,
+    'SRAU': SRAU
+}
+
 
 learning_rate = 1e-3
 weight_decay = 1e-8
@@ -78,6 +89,7 @@ def train(
     train_dataloader = DataLoader(trian_datasets, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_datasets, batch_size=batch_size, shuffle=True)
 
+    optimizer_2 = None
     if optim == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
@@ -85,6 +97,9 @@ def train(
         criterion = nn.BCELoss()
     elif criterion_name == 'CELoss' or criterion_name == 'CrossEntropyLoss':
         criterion = nn.CrossEntropyLoss()
+    elif criterion_name == 'M_and_D_UncLoss':
+        criterion = M_and_D_UncLoss(len(refer_labels), device)
+        optimizer_2 = torch.optim.Adam(criterion.parameters(), lr=lr, weight_decay=weight_decay)
 
     if lr_schedule is None:
         lr_schedule = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=1)
@@ -110,15 +125,20 @@ def train(
                 tongue_img = tongue_img.to(device, dtype=torch.float)
                 label = label.to(device, dtype=torch.long)
 
-                output = model(tongue_img).float()
+                if model_name == 'SRAU':
+                    output, var = model(tongue_img)
+                    loss = criterion(output, label, var)
+                else:
+                    output = model(tongue_img).float()
+                    # output = model(face_img, tongue_img).float()
+                    loss = criterion(output, label)
 
-                loss = criterion(output, label)
-                acc = Accuracy(output, label)
+                acc = Accuracy(output, label, refer_labels)
+                precision, recall, f1 = Confusion_matrix(output, label, refer_labels)
 
                 # 记录每批次平均指标
                 per_train_loss += loss.item()
                 per_train_acc += acc
-                precision, recall, f1 = Confusion_matrix(output, label, refer_labels)
                 per_train_precision += precision
                 per_train_recall += recall
                 per_train_f1 += f1
@@ -126,6 +146,8 @@ def train(
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+                if optimizer_2:
+                    optimizer_2.step()
                 lr_schedule.step()
 
                 pbar.set_postfix({criterion_name: loss.item(), 'acc': acc, 'precision': precision, 'recall': recall, 'f1': f1})
@@ -155,18 +177,23 @@ def train(
                     tongue_img = tongue_img.to(device, dtype=torch.float)
                     label = label.to(device, dtype=torch.long)
 
-                    output = model(tongue_img).float()
+                    if model_name == 'SRAU':
+                        output, var = model(tongue_img)
+                        loss = criterion(output, label, var)
+                    else:
+                        output = model(tongue_img).float()
+                        # output = model(face_img, tongue_img).float()
+                        loss = criterion(output, label)
 
-                    loss = criterion(output, label)
-                    acc = Accuracy(output, label)
+                    acc = Accuracy(output, label,refer_labels)
                     precision, recall, f1 = Confusion_matrix(output, label, refer_labels)
-                    per_val_precision += precision
-                    per_val_recall += recall
-                    per_val_f1 += f1
 
                     # 记录指标
                     per_val_loss += loss.item()
                     per_val_acc += acc
+                    per_val_precision += precision
+                    per_val_recall += recall
+                    per_val_f1 += f1
 
                     pbar.set_postfix({criterion_name: loss.item(), 'acc': acc, 'precision': precision, 'recall': recall, 'f1': f1})
                     pbar.update(1)
@@ -235,22 +262,19 @@ if __name__ == '__main__':
     with open(cfg_file, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    model_name = 'resnet34'
-    # model = VGG16(cfg[model_name], 3)
-    # model = Multiple_Image_in_Decision_VGG16(cfg[model_name], 3)
-    # model = Resnet(cfg[model_name], 3, 2)
-    # model = Resnet(cfg[model_name], 3, 2)
-    # model = Resnet(cfg[model_name], 3, 2)
-    # 迁移学习
-    # model = pretrained_Resnet(model_name, device, 3, 2, pretrained_path=pretrained_path).features
-    # SE-Resnet34
-    model = SE_Resnet(cfg[model_name], 3, 2)
+    model_name = 'SRAU'
+    if model_name == 'SE-Resnet':
+        model = model_class[model_name](cfg['resnet34'], 3, 2)
+    elif model_name == 'SRAU':
+        model = model_class[model_name](cfg['resnet34'], 3, 2)
+    else:
+        model = model_class[model_name](cfg[model_name], 3, 2)
     pretrained_path = None
 
     optimizer = 'Adam'
     criterion = 'CELoss'
-    lr_schedule = {'name': 'StepLR', 'step_size': 5, 'gamma': 0.9}
-    # lr_schedule = None
+    # lr_schedule = {'name': 'StepLR', 'step_size': 5, 'gamma': 0.9}
+    lr_schedule = None
     print('model:\n', model)
     print('epoch:', epochs)
     print('batch size:', batch_size)
