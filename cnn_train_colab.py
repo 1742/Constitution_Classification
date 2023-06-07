@@ -272,7 +272,7 @@ if __name__ == '__main__':
     pretrained_path = None
 
     optimizer = 'Adam'
-    criterion = 'CELoss'
+    criterion = 'M_and_D_UncLoss'
     # lr_schedule = {'name': 'StepLR', 'step_size': 5, 'gamma': 0.9}
     lr_schedule = None
     print('model:\n', model)
