@@ -25,7 +25,7 @@ data_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constit
 data_path_txt = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\data\img_names.txt'
 cfg_file = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\config.json'
 pretrained_path = r'C:\Users\13632\.cache\torch\hub\checkpoints\resnet34-b627a593.pth'
-save_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\resnet'
+save_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\model\{}.pth'
 effect_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\{}\train'
 
 
@@ -40,7 +40,7 @@ model_class = {
 
 learning_rate = 1e-4
 weight_decay = 1e-8
-epochs = 50
+epochs = 10
 batch_size = 64
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('The train will run in {} ...'.format(device))
@@ -206,7 +206,11 @@ def train(
         val_f1.append(per_val_f1 / len(val_dataloader))
 
     if save_option:
-        torch.save(model.state_dict(), os.path.join(save_path, 'se_resnet34.pth'))
+        torch.save(model.state_dict(), save_path.format(model_name))
+        if model_name == 'SRAU':
+            torch.save(criterion.state_dict(), save_path.format(criterion_name))
+
+        print('Successfully saved model weights in {}'.format(save_path))
 
     return {
         'epoch': epochs, 'loss': [train_loss, val_loss], 'acc': [train_acc, val_acc],

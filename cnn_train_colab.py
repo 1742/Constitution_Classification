@@ -24,8 +24,8 @@ data_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification
 data_path_txt = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/data/img_names.txt'
 cfg_file = r'/content/Constitution_Classification/model/config.json'
 pretrained_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet/resnet34-b627a593.pth'
-save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/resnet'
-effect_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/{}'
+save_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/model/{}.pth'
+effect_path = r'/content/drive/MyDrive/Colab Notebooks/Constitution_Classification/runs/{}.json'
 
 
 model_class = {
@@ -206,8 +206,11 @@ def train(
         val_f1.append(per_val_f1 / len(val_dataloader))
 
     if save_option:
-        torch.save(model.state_dict(), os.path.join(save_path, '{}.pth'.format(model_name)))
-        print('Successfully save weights file in {}'.format(save_path))
+        torch.save(model.state_dict(), save_path.format(model_name))
+        if model_name == 'SRAU':
+            torch.save(criterion.state_dict(), save_path.format(criterion_name))
+
+        print('Successfully saved model weights in {}'.format(save_path))
 
     return {
         'epoch': epochs, 'loss': [train_loss, val_loss], 'acc': [train_acc, val_acc],
