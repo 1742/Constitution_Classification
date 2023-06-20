@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from model.SE_Resnet.SE_Resnet import SE_Resnet
+from tools.MyLoss import Any_Uncertainty_Loss
 
 import json
 import sys
@@ -75,54 +76,36 @@ class ASPP(nn.Module):
         return self.project(res)
 
 
-class SRAU(nn.Module):
-    def __init__(self, cfg: list, in_channels: int, num_classess: int, dilation: list = [6, 12, 18]):
-        super(SRAU, self).__init__()
+class SRU(nn.Module):
+    def __init__(self, cfg: list, in_channels: int, num_classess: int):
+        super(SRU, self).__init__()
+        self.n_cls = num_classess
+
         model = SE_Resnet(cfg, in_channels, num_classess)
-        modules = list(model.children())[:-4]
+        module = list(model.children())[:-4]
+        self.model = nn.Sequential(*module)
 
-        aspp = ASPP(cfg[1][1], cfg[1][1], dilation)
-
-        modules.insert(6, aspp)
-        self.moudules = nn.Sequential(*modules)
-
+        self.adaptive_ave_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.flatten = nn.Flatten()
+        self.out_linear = nn.Linear(cfg[-1][1], num_classess)
+        self.unc_linear = nn.Linear(cfg[-1][1], num_classess * 2)
         self.dropout = nn.Dropout(0.2)
-
-        num_classess = 1 if num_classess == 2 else num_classess
-        if num_classess == 1:
-            self.out_pred = nn.Sequential(
-                nn.AdaptiveAvgPool2d((1, 1)),
-                nn.Flatten(),
-                nn.Linear(cfg[-1][1], num_classess),
-                nn.Sigmoid()
-            )
-            self.out_data_uncertainty = nn.Sequential(
-                nn.AdaptiveAvgPool2d((1, 1)),
-                nn.Flatten(),
-                nn.Linear(cfg[-1][1], num_classess),
-                nn.Sigmoid()
-            )
-        else:
-            self.out_pred = nn.Sequential(
-                nn.AdaptiveAvgPool2d((1, 1)),
-                nn.Flatten(),
-                nn.Linear(cfg[-1][1], num_classess),
-                nn.Softmax(dim=1)
-            )
-            self.out_data_uncertainty = nn.Sequential(
-                nn.AdaptiveAvgPool2d((1, 1)),
-                nn.Flatten(),
-                nn.Linear(cfg[-1][1], num_classess),
-                nn.Softmax(dim=1)
-            )
+        self.logsoftmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
-        x = self.moudules(x)
+        x = self.model(x)
         x = self.dropout(x)
-        x_pred = self.out_pred(x)
-        x_data_uncertainty = self.out_data_uncertainty(x)
 
-        return x_pred.float(), x_data_uncertainty.float()
+        x = self.adaptive_ave_pool(x)
+        x = self.flatten(x)
+        # 模型预测全连接层
+        x_ = self.out_linear(x)
+        # 获取“均值”和“方差”
+        mu, sigma = self.unc_linear(x).split(self.n_cls, 1)
+        # 输出概率
+        x_pred = self.logsoftmax(x_)
+
+        return x_pred.float(), x_.float(), mu.float(), sigma.float()
 
 
 if __name__ == '__main__':
@@ -133,11 +116,21 @@ if __name__ == '__main__':
     with open(cfg_file, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    model = SRAU(cfg['resnet34'], 3, 2)
+    model = SRU(cfg['resnet34'], 3, 2)
     print(model)
 
-    png = torch.randint(255, (1, 3, 224, 224)).float().to(device)
-    pred, data_uncertainty = model(png / 255.)
-    print(pred)
-    print(data_uncertainty)
+    png = torch.randint(255, (64, 3, 224, 224)).float().to(device)
+    label = torch.randint(2, (64,))
+    pred, x_, mu, sigma = model(png / 255.)
+    # print('pred:\n', pred)
+    # print('mu:\n', mu)
+    # print('sigma\n:', sigma)
+
+    # 采样次数
+    NUM_SAMPLES = 10
+    criterion = Any_Uncertainty_Loss(2)
+
+    loss = criterion(x_, mu, sigma, label)
+
+    print(loss.item())
 

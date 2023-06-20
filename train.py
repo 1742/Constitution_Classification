@@ -2,16 +2,16 @@ import sys
 
 import torch
 from torch import nn
-from model.vgg.vgg import *
+from torch.functional import F
+from model.vgg.vgg import VGG16
 from model.resnet.resnet import Resnet, pretrained_Resnet
 from model.SE_Resnet.SE_Resnet import SE_Resnet
-from model.SRAU.SRAU import SRAU
-from tools.MyLoss import M_and_D_UncLoss
+from tools.MyLoss import CELoss
 
 from torch.utils.data import Dataset, DataLoader
 from tools.dataloader import MyDatasets, shuffle, label_encoder
 from torchvision import transforms
-from tools.Mytransforms import Resize, RandomHorizontalFlip, RandomVerticalFlip, RandomRotation, ToTensor
+from tools.Mytransforms import Resize, RandomHorizontalFlip, RandomRotation, ToTensor, Compose
 import numpy as np
 
 import os
@@ -29,16 +29,15 @@ save_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constit
 effect_path = r'C:\Users\13632\Documents\Python_Scripts\wuzhou.Tongue\Mine\Constitution_Classification\runs\{}\train'
 
 
-model_class = {
-    'vgg16': VGG16,
+models = {
+    'vgg': VGG16,
     'resnet34': Resnet,
     'resnet50': Resnet,
-    'SE-Resnet34': SE_Resnet,
-    'SRAU': SRAU
+    'SE_Resnet': SE_Resnet
 }
 
 
-learning_rate = 1e-4
+learning_rate = 1e-3
 weight_decay = 1e-8
 epochs = 10
 batch_size = 64
@@ -89,17 +88,16 @@ def train(
     train_dataloader = DataLoader(trian_datasets, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_datasets, batch_size=batch_size, shuffle=True)
 
-    optimizer_2 = None
     if optim == 'Adam':
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
+    # 各个损失函数需要的标签形式不同，要去dataloader里手动切换......
     if criterion_name == 'BCELoss' or criterion_name == 'BinaryCrossEntropyLoss':
         criterion = nn.BCELoss()
-    elif criterion_name == 'CELoss' or criterion_name == 'CrossEntropyLoss':
+    elif criterion_name == 'CELoss':
+        criterion = CELoss(len(refer_labels))
+    elif criterion_name == 'CrossEntropyLoss':
         criterion = nn.CrossEntropyLoss()
-    elif criterion_name == 'M_and_D_UncLoss':
-        criterion = M_and_D_UncLoss(len(refer_labels), device)
-        optimizer_2 = torch.optim.Adam(criterion.parameters(), lr=lr, weight_decay=weight_decay)
 
     if lr_schedule is None:
         lr_schedule = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=1)
@@ -125,13 +123,9 @@ def train(
                 tongue_img = tongue_img.to(device, dtype=torch.float)
                 label = label.to(device, dtype=torch.float)
 
-                if model_name == 'SRAU':
-                    output, var = model(tongue_img)
-                    loss = criterion(output, label, var)
-                else:
-                    output = model(tongue_img).float()
-                    # output = model(face_img, tongue_img).float()
-                    loss = criterion(output, label)
+                output = model(tongue_img).float()
+
+                loss = criterion(output, label)
 
                 acc = Accuracy(output, label, refer_labels)
                 precision, recall, f1 = Confusion_matrix(output, label, refer_labels)
@@ -146,8 +140,6 @@ def train(
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                if optimizer_2:
-                    optimizer_2.step()
                 lr_schedule.step()
 
                 pbar.set_postfix({criterion_name: loss.item(), 'acc': acc, 'precision': precision, 'recall': recall, 'f1': f1})
@@ -177,13 +169,9 @@ def train(
                     tongue_img = tongue_img.to(device, dtype=torch.float)
                     label = label.to(device, dtype=torch.float)
 
-                    if model_name == 'SRAU':
-                        output, var = model(tongue_img)
-                        loss = criterion(output, label, var)
-                    else:
-                        output = model(tongue_img).float()
-                        # output = model(face_img, tongue_img).float()
-                        loss = criterion(output, label)
+                    output = model(tongue_img).float()
+
+                    loss = criterion(output, label)
 
                     acc = Accuracy(output, label, refer_labels)
                     precision, recall, f1 = Confusion_matrix(output, label, refer_labels)
@@ -207,9 +195,6 @@ def train(
 
     if save_option:
         torch.save(model.state_dict(), save_path.format(model_name))
-        if model_name == 'SRAU':
-            torch.save(criterion.state_dict(), save_path.format(criterion_name))
-
         print('Successfully saved model weights in {}'.format(save_path))
 
     return {
@@ -247,7 +232,6 @@ if __name__ == '__main__':
     train_transformers = [
         Resize((224, 224)),
         RandomHorizontalFlip(),
-        # RandomVerticalFlip(),
         RandomRotation((0, 15)),
         ToTensor()
     ]
@@ -263,19 +247,14 @@ if __name__ == '__main__':
     with open(cfg_file, 'r', encoding='utf-8') as f:
         cfg = json.load(f)
 
-    model_name = 'SRAU'
-    if model_name == 'SE-Resnet':
-        model = model_class[model_name](cfg['resnet34'], 3, 2)
-    elif model_name == 'SRAU':
-        model = model_class[model_name](cfg['resnet34'], 3, 2)
-    else:
-        model = model_class[model_name](cfg[model_name], 3, 2)
+    model_name = 'SE_Resnet'
+    model = models[model_name](cfg['resnet34'], 3, 2)
     pretrained_path = None
 
     optimizer = 'Adam'
-    criterion = 'M_and_D_UncLoss'
-    # lr_schedule = {'name': 'StepLR', 'step_size': 5, 'gamma': 0.9}
-    lr_schedule = None
+    criterion = 'CELoss'
+    lr_schedule = {'name': 'StepLR', 'step_size': 5, 'gamma': 0.9}
+    # lr_schedule = None
     print('model:\n', model)
     print('epoch:', epochs)
     print('batch size:', batch_size)
