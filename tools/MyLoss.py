@@ -1,58 +1,59 @@
+import sys
+
 import torch
 from torch import nn
+from torch.functional import F
 
 
-class M_and_D_UncLoss(nn.Module):
-    def __init__(self, num_classess: int, device: str):
-        super(M_and_D_UncLoss, self).__init__()
-        self.device = device
-        if num_classess == 2:
-            self.cls_loss = nn.BCELoss()
+class CELoss(object):
+    def __init__(self, n_cls: int):
+        super(CELoss, self).__init__()
+        self.n_cls = n_cls
+
+    def __call__(self, preds: torch.Tensor, labels: torch.Tensor):
+        # 根据输入的标签类型转化成序号标签
+        if labels.max() == 1 and self.n_cls != 2:
+            labels = torch.argmax(labels, dim=1).long().cpu()
         else:
-            self.cls_loss = nn.CrossEntropyLoss()
+            labels = labels.long().cpu()
 
-        self.unc_weight_cls_1, self.unc_weight_cls_2 = self.init_unc_weight()
-        self.unc_weight_var_1, self.unc_weight_var_2 = self.init_unc_weight()
-
-    def forward(self, pred, labels, var):
-        cls_loss = self.cls_loss(pred, labels)
-        var = var.mean()
-
-        # 模型不确定性加权损失
-        unc_cls_loss = self.unc_weight_cls_1 * cls_loss + self.unc_weight_cls_2
-        # 数据不确定性加权损失
-        unc_var_loss = self.unc_weight_var_1 * var + self.unc_weight_var_2
-        # 模型不确定性、数据不确定性加权损失
-        total_loss = unc_cls_loss + unc_var_loss
-
-        return total_loss.sum()
-
-    def init_unc_weight(self):
-        weights = torch.rand(1, device=self.device)
-        unc_weight_1 = 0.5 * torch.pow(weights, -2)
-        unc_weight_2 = torch.log(1 + torch.pow(weights, 2))
-        # 确保初始损失不会太大。。。
-        if unc_weight_1 > 10:
-            unc_weight_1 /= 10.0
-        if unc_weight_2 > 10:
-            unc_weight_2 /= 10.0
-
-        unc_weight_1 = nn.Parameter(unc_weight_1)
-        unc_weight_2 = nn.Parameter(unc_weight_2)
-
-        return unc_weight_1, unc_weight_2
+        return F.nll_loss(preds, labels)
 
 
-if __name__ == '__main__':
-    pred = torch.rand((64, 1))
-    labels = torch.randint(2, (64, 1)).float()
-    var = torch.rand((64, 1))
+class Any_Uncertainty_Loss(nn.Module):
+    def __init__(self, n_cls: int, n_sample: int = 10):
+        super(Any_Uncertainty_Loss, self).__init__()
+        self.n_cls = n_cls
+        self.celoss = CELoss(n_cls)
+        self.n_sample = n_sample
 
-    criterion = M_and_D_UncLoss(2, 'cpu')
+    def forward(self, x_: torch.Tensor, mu: torch.Tensor, sigma: torch.Tensor, label: torch.Tensor):
+        """
+        计算嵌入了不确定性的损失
 
-    loss = criterion(pred, labels, var)
-    optim = torch.optim.Adam(criterion.parameters(), lr=1e-4, weight_decay=1e-8)
-    print(loss)
-    loss.backward()
-    optim.step()
+        :param x_:
+            未经LogSoftmax的全连接层输出
+        :param mu:
+            模型输出的任意不确定性“均值”
+        :param sigma:
+            模型输出的任意不确定性“方差”
+        :param label:
+            标签，序号编码
+
+        :return:
+            任意不确定性损失
+        """
+        x_ = x_.cpu()
+        label = label.long().cpu()
+        # 在各类别上加n_sample次高斯分布
+        x_gauss_distrib_sample_prob = torch.zeros((x_.size(0), self.n_sample, self.n_cls))
+        for t in range(self.n_sample):
+            epsilon = torch.randn(sigma.size())
+            epsilon = mu + torch.mul(sigma, epsilon)
+            x_gauss_distrib_sample_prob[:, t, :] = F.softmax(x_ * epsilon, dim=1)
+
+        logits = torch.mean(x_gauss_distrib_sample_prob, 1)
+        unc_loss = F.nll_loss(torch.log(logits), label)
+
+        return unc_loss
 
