@@ -3,7 +3,7 @@ import sys
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
-from tools.Mytransforms import Resize, ToTensor, Compose
+from tools.Mytransforms import Resize, ToTensor, RandomHorizontalFlip, RandomVerticalFlip, RandomRotation, Compose
 from PIL import Image
 import matplotlib.pyplot as plt
 import os
@@ -15,7 +15,11 @@ class MyDatasets(Dataset):
         super(MyDatasets, self).__init__()
         self.data_path = data_path
         self.img_info = img_info
+        # 什么编码看要用什么损失函数。。。。
+        # 序号编码
         self.labels = label_encoder(label)
+        # 独热编码
+        # self.labels = one_hot_encoder(label)
         self.transformers = Compose(transformers)
 
     def __len__(self):
@@ -32,7 +36,10 @@ class MyDatasets(Dataset):
         tongue_img = Image.open(tongue_img_path).convert('RGB')
         # 数据增强
         face_img, tongue_img = self.transformers(face_img, tongue_img)
-        label = torch.Tensor([self.labels[label]])
+        # 返回序号编码
+        label = self.labels[label]
+        # 返回独热编码
+        # label = self.labels[label]
 
         return face_img, tongue_img, label
 
@@ -94,6 +101,7 @@ if __name__ == '__main__':
 
     transformers = [
         Resize((224, 224)),
+
         ToTensor()
     ]
 
